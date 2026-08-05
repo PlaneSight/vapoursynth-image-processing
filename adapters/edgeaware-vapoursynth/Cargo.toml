@@ -1,0 +1,28 @@
+[package]
+name = "vs-edgeaware-vapoursynth"
+description = "VapourSynth runtime adapter for EdgeAware"
+version.workspace = true
+edition.workspace = true
+rust-version = "1.88"
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+vapoursynth.workspace = true
+vs-edgeaware = { path = "../../plugins/edgeaware" }
+vsip-core.workspace = true
+vsip-vapoursynth.workspace = true
+
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+rust_2018_idioms = { level = "deny", priority = -1 }
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+clone_on_ref_ptr = "deny"
+undocumented_unsafe_blocks = "deny"

@@ -8,4 +8,3 @@ pub fn single_seed_mask(width: usize, height: usize, x: usize, y: usize) -> Vec<
     mask[y * width + x] = 0;
     mask
 }
-

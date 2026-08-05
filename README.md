@@ -1,52 +1,95 @@
 # VapourSynth Image Processing
 
-A Rust monorepo for native, composable VapourSynth image and video processing
-plugins. The workspace concentrates shared frame handling, typed configuration,
-reference kernels, optimized dispatch, test fixtures, packaging policy, and
-documentation while keeping every plugin independently releasable.
+A Rust workspace for native, composable VapourSynth image and video processing
+plugins. It contains pure, runtime-independent scalar algorithms, typed plugin
+catalogues, and loadable VapourSynth adapters built on
+[`rust-av/vapoursynth-rs`](https://github.com/rust-av/vapoursynth-rs).
 
 ## Plugin families
 
-| Crate         | Namespace  | Scope                                             | Phase      |
-| ------------- | ---------- | ------------------------------------------------- | ---------- |
-| vs-masklab    | masklab    | Morphology, distance fields and connected regions | Foundation |
-| vs-defect     | defect     | Dust, scratches, dropouts and temporal repair     | Planned    |
-| vs-deconvolve | deconvolve | PSF-based and regularized deconvolution           | Planned    |
-| vs-flowfield  | flowfield  | Dense motion fields, confidence and warping       | Planned    |
-| vs-grainlab   | grainlab   | Grain measurement, matching and synthesis         | Planned    |
-| vs-phase      | phase      | Phase motion, vibration and event energy          | Planned    |
-| vs-edgeaware  | edgeaware  | Guided and edge-preserving smoothing              | Planned    |
-| vs-register   | register   | Alignment, stacking and registration              | Planned    |
-| vs-lens       | lens       | Lens and rolling-shutter correction               | Planned    |
-| vs-tonelab    | tonelab    | Local tone and exposure operations                | Planned    |
-| vs-residual   | residual   | Structure, texture and noise decomposition        | Planned    |
-| vs-segment    | segment    | Watershed, superpixels and region graphs          | Planned    |
+All 53 catalogued filters have working scalar reference implementations and
+correctness tests. They remain `Experimental`: a filter becomes `Stable` only
+after public API review, representative release benchmarks, and packaged
+VapourSynth integration tests.
 
-vs-masklab contains the first reference implementation: a Manhattan distance
-transform over caller-owned buffers. Other plugin crates start as typed,
-discoverable contracts rather than pretending unfinished algorithms are usable.
+| Crate | Namespace | Implemented filters |
+| --- | --- | --- |
+| `vs-masklab` | `masklab` | DistanceL1, DistanceEuclidean, ComponentLabels, Reconstruct, Thin, Feather |
+| `vs-defect` | `defect` | TemporalOutliers, ScratchDetect, DropoutRepair, SpatialOutliers, InpaintTemporal |
+| `vs-deconvolve` | `deconvolve` | Wiener, RichardsonLucy, Regularized, EstimatePsf |
+| `vs-flowfield` | `flowfield` | Estimate, Warp, Confidence, Compose, Visualize |
+| `vs-grainlab` | `grainlab` | Analyze, Synthesize, Match, Residual |
+| `vs-phase` | `phase` | Correlate, LocalMotion, Magnify, EventEnergy |
+| `vs-edgeaware` | `edgeaware` | Guided, JointGuided, DomainTransform, RollingGuidance, GlobalSmooth |
+| `vs-register` | `register` | Estimate, Warp, Stack, Stabilize |
+| `vs-lens` | `lens` | Undistort, Chromatic, Vignette, RollingShutter |
+| `vs-tonelab` | `tonelab` | Clahe, LocalLaplacian, ExposureFusion, NormalizeIllumination |
+| `vs-residual` | `residual` | Decompose, Temporal, Spectrum, Compare |
+| `vs-segment` | `segment` | Watershed, Superpixels, RegionDegreeMap, Merge |
 
-## Commands
+## Workspace structure
 
-    cargo xtask check-tree
-    cargo fmt --check
-    cargo clippy --workspace --all-targets -- -D warnings
-    cargo test --workspace
-    cargo test --workspace --release
-    cargo doc --workspace --no-deps
+- `crates/vsip-core`: validated extents and borrowed strided planes.
+- `crates/vsip-kernels`: runtime-independent shared reference kernels.
+- `crates/vsip-plugin-api`: typed catalogues, maturity, and execution shape.
+- `crates/vsip-test-support`: deterministic test fixtures.
+- `crates/vsip-vapoursynth`: safe scheduling, frame conversion, and bounded
+  reusable scratch storage.
+- `plugins/*`: independently releasable pure plugin-family APIs.
+- `adapters/*-vapoursynth`: one loadable `cdylib` per namespace.
 
-The pinned development compiler is Rust 1.97.1. The workspace MSRV is Rust
-1.85, the first stable release supporting Rust 2024.
+Pure kernels never import VapourSynth. Runtime adapters translate validated
+frame rows into tightly packed caller-owned scratch, invoke pure APIs, and copy
+the result back. No adapter contains handwritten unsafe code; the pinned
+upstream export macro owns the generated C ABI entry point and panic boundary.
 
-## Design rules
+## Build and test
+
+```text
+cargo xtask check-tree
+cargo fmt --check
+cargo check --workspace --all-targets
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+cargo test --workspace --release
+cargo test --workspace --no-default-features
+cargo doc --workspace --no-deps
+```
+
+The pinned development compiler is Rust 1.97.1. Pure algorithms and plugin
+families retain Rust 1.85 as their MSRV. Runtime adapter crates require Rust
+1.88 because the pinned upstream `vapoursynth-rs` revision depends on
+`libloading` 0.9.
+
+Build one loadable plugin with, for example:
+
+```text
+cargo build --release -p vs-masklab-vapoursynth
+```
+
+The resulting platform library is under `target/release`. Adapters support u8,
+u16, and single-precision f32 planar samples unless a filter documents a
+narrower contract. Integer samples retain their native numeric scale during
+processing; output is rounded and clamped to the declared bit depth, and
+non-finite integer output is rejected.
+
+Motion-vector and aggregate analysis clips use planar RGB f32 so signed and
+fractional components remain representable. Residual-family adapters also
+require f32 clips. Defect repair functions take explicit mask clips; sample
+value zero is never treated as an implicit defect marker.
+
+## Design and performance policy
 
 - Plugins may depend on shared crates; shared crates never depend on plugins.
-- Algorithm crates do not know about VapourSynth or its FFI.
-- Reference scalar kernels precede target-specific optimization.
-- Caller-owned output and scratch storage are preferred on frame hot paths.
-- Every optimized kernel must be differentially tested against its reference.
-- VapourSynth ABI code will live behind one narrow, panic-contained adapter.
-- Build products and generated documentation never enter authored source roots.
+- Configuration parsing, frame requests, scratch acquisition, and dispatch
+  occur outside pixel loops.
+- Stable-size transforms write to caller-owned output and scratch storage.
+- Scalar implementations are authoritative and explicitly document their cost.
+- No SIMD or speed claim is accepted without release benchmarks and
+  generated-code inspection against the scalar reference.
+- Every optimized path must be differentially tested across odd sizes, padded
+  strides, tails, and supported dispatch targets.
 
-See [Architecture](docs/architecture.md), [Roadmap](docs/roadmap.md), and
+See [Architecture](docs/architecture.md), [Roadmap](docs/roadmap.md),
+[VapourSynth runtime](docs/vapoursynth.md), and
 [Artifact policy](docs/artifacts.md).

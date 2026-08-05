@@ -1,3 +1,5 @@
+//! Repository conformance and authored-artifact maintenance commands.
+
 use std::{env, fs, path::Path, process::ExitCode};
 
 const PLUGINS: &[&str] = &[
@@ -41,29 +43,79 @@ fn check_tree() -> ExitCode {
         "Cargo.toml",
         "docs/architecture.md",
         "docs/artifacts.md",
+        "docs/vapoursynth.md",
+        "tests/vapoursynth/catalog_smoke.vpy",
+        "tests/vapoursynth/masklab_smoke.vpy",
         "crates/vsip-core/Cargo.toml",
         "crates/vsip-kernels/Cargo.toml",
         "crates/vsip-plugin-api/Cargo.toml",
+        "crates/vsip-vapoursynth/Cargo.toml",
     ];
-    let mut missing = Vec::new();
+    let mut problems = Vec::new();
     for path in required {
         if !Path::new(path).is_file() {
-            missing.push(path.to_owned());
+            problems.push(format!("missing: {path}"));
         }
     }
     for plugin in PLUGINS {
-        let path = format!("plugins/{plugin}/Cargo.toml");
-        if !Path::new(&path).is_file() {
-            missing.push(path);
-        }
+        check_plugin(plugin, &mut problems);
     }
-    if missing.is_empty() {
-        println!("repository tree contract satisfied");
+    if problems.is_empty() {
+        println!("repository tree and adapter catalogue contracts satisfied");
         ExitCode::SUCCESS
     } else {
-        missing.iter().for_each(|path| eprintln!("missing: {path}"));
+        problems.iter().for_each(|problem| eprintln!("{problem}"));
         ExitCode::FAILURE
     }
+}
+
+fn check_plugin(plugin: &str, problems: &mut Vec<String>) {
+    let manifest = format!("plugins/{plugin}/Cargo.toml");
+    let source_path = format!("plugins/{plugin}/src/lib.rs");
+    let adapter_manifest = format!("adapters/{plugin}-vapoursynth/Cargo.toml");
+    let adapter_path = format!("adapters/{plugin}-vapoursynth/src/lib.rs");
+
+    for path in [&manifest, &source_path, &adapter_manifest, &adapter_path] {
+        if !Path::new(path).is_file() {
+            problems.push(format!("missing: {path}"));
+        }
+    }
+
+    let Ok(source) = fs::read_to_string(&source_path) else {
+        return;
+    };
+    if source.contains("#![allow(missing_docs)]") {
+        problems.push(format!(
+            "plugin suppresses public API documentation lint: {source_path}"
+        ));
+    }
+
+    let Ok(adapter) = fs::read_to_string(&adapter_path) else {
+        return;
+    };
+    for forbidden in ["unsafe {", "unsafe fn", "unsafe extern"] {
+        if adapter.contains(forbidden) {
+            problems.push(format!(
+                "adapter {plugin} contains handwritten unsafe syntax: {forbidden}"
+            ));
+        }
+    }
+    for filter in catalogue_names(&source) {
+        if !adapter.contains(&format!("\"{filter}\"")) {
+            problems.push(format!(
+                "adapter {plugin} does not register catalogue filter {filter}"
+            ));
+        }
+    }
+}
+
+fn catalogue_names(source: &str) -> impl Iterator<Item = &str> {
+    source.lines().filter_map(|line| {
+        line.trim()
+            .strip_prefix("name: \"")
+            .and_then(|remainder| remainder.split_once('"'))
+            .map(|(name, _)| name)
+    })
 }
 
 fn clean(path: &str) -> ExitCode {
@@ -79,4 +131,3 @@ fn clean(path: &str) -> ExitCode {
         }
     }
 }
-

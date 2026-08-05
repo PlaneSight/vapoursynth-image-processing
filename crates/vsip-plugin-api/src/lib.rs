@@ -49,4 +49,3 @@ pub struct Plugin {
     /// Public filter catalogue.
     pub filters: &'static [Filter],
 }
-

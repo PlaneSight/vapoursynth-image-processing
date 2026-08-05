@@ -1,9 +1,11 @@
 [workspace]
 members = [
+  "adapters/*",
   "crates/vsip-core",
   "crates/vsip-kernels",
   "crates/vsip-plugin-api",
   "crates/vsip-test-support",
+  "crates/vsip-vapoursynth",
   "plugins/*",
   "tools/xtask",
 ]
@@ -22,6 +24,8 @@ vsip-core = { path = "crates/vsip-core" }
 vsip-kernels = { path = "crates/vsip-kernels" }
 vsip-plugin-api = { path = "crates/vsip-plugin-api" }
 vsip-test-support = { path = "crates/vsip-test-support" }
+vsip-vapoursynth = { path = "crates/vsip-vapoursynth" }
+vapoursynth = { git = "https://github.com/rust-av/vapoursynth-rs", rev = "ff6b542d3603c3075784303ffa1e44e283baa85c", default-features = false }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

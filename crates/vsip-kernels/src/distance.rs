@@ -28,10 +28,7 @@ impl std::error::Error for DistanceError {}
 /// The output is caller-owned and may be reused between frames. The algorithm
 /// performs two linear passes and allocates no memory. When the mask contains
 /// no zero pixel, all output values are set to width + height.
-pub fn l1_to_zero(
-    mask: Plane<'_, u8>,
-    mut output: PlaneMut<'_, u32>,
-) -> Result<(), DistanceError> {
+pub fn l1_to_zero(mask: Plane<'_, u8>, mut output: PlaneMut<'_, u32>) -> Result<(), DistanceError> {
     let extent = mask.extent();
     if output.extent() != extent {
         return Err(DistanceError::ExtentMismatch);
@@ -59,42 +56,50 @@ fn maximum_distance(extent: Extent) -> Result<u32, DistanceError> {
 
 fn forward_pass(output: &mut PlaneMut<'_, u32>) {
     let extent = output.extent();
-    for y in 0..extent.height() {
-        for x in 0..extent.width() {
-            let from_left = if x == 0 {
-                u32::MAX
-            } else {
-                output.row_mut(y).expect("validated row")[x - 1]
-            };
+    let stride = output.stride();
+    let width = extent.width();
+    let height = extent.height();
+    let data = output.backing_mut();
+
+    for y in 0..height {
+        let row_start = y * stride;
+        for x in 0..width {
+            let index = row_start + x;
+            let from_left = if x == 0 { u32::MAX } else { data[index - 1] };
             let from_above = if y == 0 {
                 u32::MAX
             } else {
-                output.row_mut(y - 1).expect("validated row")[x]
+                data[index - stride]
             };
             let candidate = from_left.min(from_above).saturating_add(1);
-            let pixel = &mut output.row_mut(y).expect("validated row")[x];
-            *pixel = (*pixel).min(candidate);
+            data[index] = data[index].min(candidate);
         }
     }
 }
 
 fn backward_pass(output: &mut PlaneMut<'_, u32>) {
     let extent = output.extent();
-    for y in (0..extent.height()).rev() {
-        for x in (0..extent.width()).rev() {
-            let from_right = if x + 1 == extent.width() {
+    let stride = output.stride();
+    let width = extent.width();
+    let height = extent.height();
+    let data = output.backing_mut();
+
+    for y in (0..height).rev() {
+        let row_start = y * stride;
+        for x in (0..width).rev() {
+            let index = row_start + x;
+            let from_right = if x + 1 == width {
                 u32::MAX
             } else {
-                output.row_mut(y).expect("validated row")[x + 1]
+                data[index + 1]
             };
-            let from_below = if y + 1 == extent.height() {
+            let from_below = if y + 1 == height {
                 u32::MAX
             } else {
-                output.row_mut(y + 1).expect("validated row")[x]
+                data[index + stride]
             };
             let candidate = from_right.min(from_below).saturating_add(1);
-            let pixel = &mut output.row_mut(y).expect("validated row")[x];
-            *pixel = (*pixel).min(candidate);
+            data[index] = data[index].min(candidate);
         }
     }
 }
@@ -142,5 +147,48 @@ mod tests {
         .expect("distance transform succeeds");
         assert_eq!(output, [4; 4]);
     }
-}
 
+    #[test]
+    fn matches_exhaustive_oracle_for_small_masks() {
+        for height in 1..=3 {
+            for width in 1..=3 {
+                let area = width * height;
+                for bits in 0_u16..(1_u16 << area) {
+                    let mask = (0..area)
+                        .map(|index| u8::from(bits & (1 << index) != 0))
+                        .collect::<Vec<_>>();
+                    let mut output = vec![0_u32; area];
+                    let extent = Extent::new(width, height).expect("non-empty extent");
+                    l1_to_zero(
+                        Plane::new(&mask, extent, width).expect("tight input"),
+                        PlaneMut::new(&mut output, extent, width).expect("tight output"),
+                    )
+                    .expect("representable small transform");
+
+                    assert_eq!(output, brute_force(&mask, width, height));
+                }
+            }
+        }
+    }
+
+    fn brute_force(mask: &[u8], width: usize, height: usize) -> Vec<u32> {
+        let missing = u32::try_from(width + height).expect("small dimensions");
+        (0..height)
+            .flat_map(|y| {
+                (0..width).map(move |x| {
+                    mask.iter()
+                        .enumerate()
+                        .filter(|&(_, &pixel)| pixel == 0)
+                        .map(|(index, _)| {
+                            let seed_x = index % width;
+                            let seed_y = index / width;
+                            u32::try_from(x.abs_diff(seed_x) + y.abs_diff(seed_y))
+                                .expect("small distance")
+                        })
+                        .min()
+                        .unwrap_or(missing)
+                })
+            })
+            .collect()
+    }
+}

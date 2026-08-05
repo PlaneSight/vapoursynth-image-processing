@@ -72,12 +72,29 @@ impl<'a, T> Plane<'a, T> {
     /// Validates and constructs a plane view.
     pub fn new(data: &'a [T], extent: Extent, stride: usize) -> Result<Self, GeometryError> {
         validate_buffer(data.len(), extent, stride)?;
-        Ok(Self { data, extent, stride })
+        Ok(Self {
+            data,
+            extent,
+            stride,
+        })
     }
 
     /// Returns the visible extent.
     pub const fn extent(self) -> Extent {
         self.extent
+    }
+
+    /// Returns the distance between row starts, measured in elements.
+    pub const fn stride(self) -> usize {
+        self.stride
+    }
+
+    /// Returns the validated backing buffer, including row padding.
+    ///
+    /// Only the first [`Extent::width`] elements of each row are visible image
+    /// data. The final row need not include trailing padding.
+    pub const fn backing(self) -> &'a [T] {
+        self.data
     }
 
     /// Returns visible rows without exposing row padding.
@@ -108,18 +125,40 @@ pub struct PlaneMut<'a, T> {
 
 impl<'a, T> PlaneMut<'a, T> {
     /// Validates and constructs a mutable plane view.
-    pub fn new(
-        data: &'a mut [T],
-        extent: Extent,
-        stride: usize,
-    ) -> Result<Self, GeometryError> {
+    pub fn new(data: &'a mut [T], extent: Extent, stride: usize) -> Result<Self, GeometryError> {
         validate_buffer(data.len(), extent, stride)?;
-        Ok(Self { data, extent, stride })
+        Ok(Self {
+            data,
+            extent,
+            stride,
+        })
     }
 
     /// Returns the visible extent.
     pub const fn extent(&self) -> Extent {
         self.extent
+    }
+
+    /// Returns the distance between row starts, measured in elements.
+    pub const fn stride(&self) -> usize {
+        self.stride
+    }
+
+    /// Returns the validated backing buffer, including row padding.
+    ///
+    /// Only the first [`Extent::width`] elements of each row are visible image
+    /// data. The final row need not include trailing padding.
+    pub fn backing(&self) -> &[T] {
+        self.data
+    }
+
+    /// Returns the validated mutable backing buffer, including row padding.
+    ///
+    /// Callers must preserve padding unless their operation explicitly owns
+    /// it. Kernels should normally address visible elements from the validated
+    /// extent and stride.
+    pub fn backing_mut(&mut self) -> &mut [T] {
+        self.data
     }
 
     /// Returns visible mutable rows without exposing row padding.
@@ -161,7 +200,7 @@ fn validate_buffer(length: usize, extent: Extent, stride: usize) -> Result<(), G
 
 #[cfg(test)]
 mod tests {
-    use super::{Extent, GeometryError, Plane};
+    use super::{Extent, GeometryError, Plane, PlaneMut};
 
     #[test]
     fn plane_hides_padding() {
@@ -181,5 +220,31 @@ mod tests {
             Plane::new(&[0_u8; 4], extent, 3),
             Err(GeometryError::ShortBuffer)
         ));
+    }
+
+    #[test]
+    fn plane_rejects_short_stride() {
+        let extent = Extent::new(3, 2).expect("valid extent");
+        assert!(matches!(
+            Plane::new(&[0_u8; 6], extent, 2),
+            Err(GeometryError::ShortStride)
+        ));
+    }
+
+    #[test]
+    fn mutable_rows_preserve_padding() {
+        let extent = Extent::new(2, 2).expect("valid extent");
+        let mut data = [1, 2, 99, 3, 4];
+        let mut plane = PlaneMut::new(&mut data, extent, 3).expect("valid plane");
+        for row in plane.rows_mut() {
+            row.fill(7);
+        }
+        assert_eq!(data, [7, 7, 99, 7, 7]);
+    }
+
+    #[test]
+    fn extent_rejects_empty_axes() {
+        assert_eq!(Extent::new(0, 1), Err(GeometryError::EmptyExtent));
+        assert_eq!(Extent::new(1, 0), Err(GeometryError::EmptyExtent));
     }
 }

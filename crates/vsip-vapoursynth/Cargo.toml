@@ -1,0 +1,15 @@
+[package]
+name = "vsip-vapoursynth"
+description = "VapourSynth frame and filter adapters for VSIP plugins"
+version.workspace = true
+edition.workspace = true
+rust-version = "1.88"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+vapoursynth.workspace = true
+vsip-core.workspace = true
+
+[lints]
+workspace = true
