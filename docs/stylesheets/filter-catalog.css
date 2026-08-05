@@ -1,9 +1,8 @@
 /* Filter catalogue ---------------------------------------------------------
  *
- * The catalogue is authored as semantic Markdown tables, which keeps the
- * source compact and accessible. The companion script marks only tables with
- * the Public call / Shape / Output and contract schema, and this stylesheet
- * presents those rows as responsive reference cards.
+ * The catalogue remains a single semantic Markdown file. The companion
+ * script marks only filter-reference tables, while this stylesheet presents
+ * every table row as one full-width reference card.
  */
 
 .md-typeset table.filter-reference {
@@ -28,8 +27,8 @@
 
 .md-typeset table.filter-reference tbody {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem;
   width: 100%;
 }
 
@@ -61,7 +60,7 @@
 
 .md-typeset table.filter-reference td::before {
   display: block;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.3rem;
   color: var(--md-default-fg-color--light);
   font-size: 0.68rem;
   font-weight: 700;
@@ -81,7 +80,6 @@
   border: 1px solid var(--md-code-bg-color);
   border-radius: 0.4rem;
   background: var(--md-code-bg-color);
-  box-decoration-break: clone;
   color: var(--md-code-fg-color);
   font-size: 0.78rem;
   line-height: 1.55;
@@ -93,13 +91,6 @@
   grid-column: 1;
   align-self: start;
   justify-self: start;
-}
-
-.md-typeset table.filter-reference td:nth-child(2)::before {
-  content: none;
-}
-
-.md-typeset table.filter-reference td:nth-child(2) {
   padding: 0.22rem 0.6rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--md-accent-fg-color) 12%, transparent);
@@ -108,6 +99,10 @@
   font-weight: 700;
   line-height: 1.4;
   white-space: nowrap;
+}
+
+.md-typeset table.filter-reference td:nth-child(2)::before {
+  content: none;
 }
 
 .md-typeset table.filter-reference td:nth-child(3) {
@@ -125,9 +120,9 @@
   margin-bottom: 0.8rem;
 }
 
-@media screen and (max-width: 59.9844em) {
-  .md-typeset table.filter-reference tbody {
-    grid-template-columns: 1fr;
+@media screen and (max-width: 44.9844em) {
+  .md-typeset table.filter-reference tr {
+    padding: 0.9rem;
   }
 }
 
