@@ -41,9 +41,23 @@ fn main() -> ExitCode {
 fn check_tree() -> ExitCode {
     let required = [
         "Cargo.toml",
+        "pyproject.toml",
+        "uv.lock",
+        ".python-version",
+        "zensical.toml",
+        "src/vsip_tools/__init__.py",
+        "src/vsip_tools/cli.py",
+        "src/vsip_tools/py.typed",
         "docs/architecture.md",
         "docs/artifacts.md",
+        "docs/cli.md",
+        "docs/development.md",
+        "docs/filter-catalog.md",
+        "docs/getting-started.md",
+        "docs/index.md",
         "docs/vapoursynth.md",
+        "tests/python/test_cli.py",
+        "tests/python/test_metadata.py",
         "tests/vapoursynth/catalog_smoke.vpy",
         "tests/vapoursynth/masklab_smoke.vpy",
         "crates/vsip-core/Cargo.toml",
@@ -61,7 +75,7 @@ fn check_tree() -> ExitCode {
         check_plugin(plugin, &mut problems);
     }
     if problems.is_empty() {
-        println!("repository tree and adapter catalogue contracts satisfied");
+        println!("repository tree, Python tooling, docs, and adapter catalogues satisfied");
         ExitCode::SUCCESS
     } else {
         problems.iter().for_each(|problem| eprintln!("{problem}"));

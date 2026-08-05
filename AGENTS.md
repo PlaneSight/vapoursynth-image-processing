@@ -15,6 +15,8 @@ boundaries; do not collapse algorithms into a generic utilities crate.
 - `adapters/*-vapoursynth` may depend on one plugin crate and
   `vsip-vapoursynth`; no other crate may depend on an adapter;
 - test-support code must not leak into release dependencies.
+- `src/vsip_tools` may orchestrate repository tools but must not contain image
+  processing or duplicate Cargo/VapourSynth domain logic.
 
 ## Implementation policy
 
@@ -33,9 +35,14 @@ boundaries; do not collapse algorithms into a generic utilities crate.
 
 ## Validation
 
-Run the commands documented in README.md. Test odd dimensions, padded strides,
+Use `uv run vsip` as documented in README.md. Test odd dimensions, padded strides,
 empty or invalid configuration, numeric boundaries, NaNs where formats permit
 them, and deterministic behavior across thread counts.
+
+Python tooling requires Python 3.14, is resolved exclusively through uv, and
+must pass Ruff, its unit tests, package construction, and a strict Zensical
+build. Keep `pyproject.toml`, `.python-version`, `uv.lock`, the public CLI, and
+the Zensical CLI reference coherent.
 
 Pure crates must pass on Rust 1.85. The pinned VapourSynth runtime graph has a
 Rust 1.88 MSRV. The full workspace gate uses the pinned Rust 1.97.1 toolchain.

@@ -37,6 +37,8 @@ VapourSynth integration tests.
   reusable scratch storage.
 - `plugins/*`: independently releasable pure plugin-family APIs.
 - `adapters/*-vapoursynth`: one loadable `cdylib` per namespace.
+- `src/vsip_tools`: the installable, cross-platform repository CLI.
+- `docs/` and `zensical.toml`: authored Zensical documentation.
 
 Pure kernels never import VapourSynth. Runtime adapters translate validated
 frame rows into tightly packed caller-owned scratch, invoke pure APIs, and copy
@@ -45,16 +47,23 @@ upstream export macro owns the generated C ABI entry point and panic boundary.
 
 ## Build and test
 
+Python 3.14 and all repository tooling are managed by
+[uv](https://docs.astral.sh/uv/). Bootstrap once, then use the same `vsip`
+interface on Windows, Linux, and macOS:
+
 ```text
-cargo xtask check-tree
-cargo fmt --check
-cargo check --workspace --all-targets
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
-cargo test --workspace --release
-cargo test --workspace --no-default-features
-cargo doc --workspace --no-deps
+uv python install 3.14
+uv sync --locked
+uv run vsip info
+uv run vsip check
+uv run vsip test
+uv run vsip check --msrv
 ```
+
+`uv run --locked vsip ci` is the exhaustive local gate: Python formatting and
+tests, repository conformance, all Rust test profiles, documentation, both
+MSRV contracts, and Python distribution construction. Use `uv run vsip --help`
+for focused build, format, documentation, and VapourSynth smoke commands.
 
 The pinned development compiler is Rust 1.97.1. Pure algorithms and plugin
 families retain Rust 1.85 as their MSRV. Runtime adapter crates require Rust
@@ -64,7 +73,7 @@ families retain Rust 1.85 as their MSRV. Runtime adapter crates require Rust
 Build one loadable plugin with, for example:
 
 ```text
-cargo build --release -p vs-masklab-vapoursynth
+uv run vsip build --release --package vs-masklab-vapoursynth
 ```
 
 The resulting platform library is under `target/release`. Adapters support u8,
@@ -90,6 +99,8 @@ value zero is never treated as an implicit defect marker.
 - Every optimized path must be differentially tested across odd sizes, padded
   strides, tails, and supported dispatch targets.
 
-See [Architecture](docs/architecture.md), [Roadmap](docs/roadmap.md),
+See the [Getting started](docs/getting-started.md) and
+[CLI](docs/cli.md) guides, [Filter catalogue](docs/filter-catalog.md),
+[Architecture](docs/architecture.md), [Roadmap](docs/roadmap.md),
 [VapourSynth runtime](docs/vapoursynth.md), and
 [Artifact policy](docs/artifacts.md).

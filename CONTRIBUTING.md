@@ -1,8 +1,10 @@
 # Contributing
 
-Start by running cargo xtask check-tree. A change is ready for review when
-formatting, Clippy, debug tests, release tests, documentation and the tree
-contract pass.
+Install Python 3.14 and the locked tooling with `uv sync --locked`. Use
+`uv run vsip check --quick` while editing. A change is ready for review when
+`uv run --locked vsip ci` passes; that command covers formatting, Clippy, every
+test profile, both documentation systems, packaging, MSRV checks, and the tree
+contract.
 
 Pure crates must continue to compile and run tests on Rust 1.85. Runtime
 adapters must compile on Rust 1.88, the effective MSRV of the pinned
@@ -25,3 +27,9 @@ Runtime changes must use the shared `FrameBuffers` numeric policy and scheduling
 adapters. Do not duplicate frame-format conversion in a plugin. Validate modes
 and configuration before constructing a filter, keep handwritten unsafe code
 out of adapters, and add an installed-host smoke test for new ABI behavior.
+
+Repository automation belongs in the typed `vsip_tools` Python package and
+must remain cross-platform: invoke tools with argument arrays, resolve paths
+explicitly, and never depend on shell-specific environment syntax. Change
+Python dependencies through uv, commit `uv.lock`, and keep the CLI reference in
+sync with every public command.

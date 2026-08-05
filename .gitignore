@@ -1,8 +1,11 @@
 /target/
 /dist/
 /site/
+/.venv/
+/.ruff_cache/
+__pycache__/
+*.py[cod]
 /.tmp/
 /.cache/
 *.profraw
 *.profdata
-
