@@ -1,0 +1,14 @@
+[package]
+name = "vs-residual"
+description = "Structure, texture and noise decomposition for VapourSynth"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+vsip-plugin-api.workspace = true
+
+[lints]
+workspace = true

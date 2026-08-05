@@ -1,0 +1,15 @@
+[package]
+name = "vs-masklab"
+description = "Morphology, distance fields and region analysis for VapourSynth"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+vsip-kernels.workspace = true
+vsip-plugin-api.workspace = true
+
+[lints]
+workspace = true

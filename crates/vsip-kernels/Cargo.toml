@@ -1,0 +1,14 @@
+[package]
+name = "vsip-kernels"
+description = "Reference image-processing kernels"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+vsip-core.workspace = true
+
+[lints]
+workspace = true
