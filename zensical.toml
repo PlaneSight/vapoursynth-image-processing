@@ -12,17 +12,19 @@ copyright = "Copyright &copy; 2026 PlaneSight"
 
 nav = [
   { "Home" = "index.md" },
-  { "Getting started" = "getting-started.md" },
-  { "Using VSIP" = [
-    { "CLI reference" = "cli.md" },
-    { "Filter catalogue" = "filter-catalog.md" },
+  { "Guides" = [
+    { "Getting started" = "getting-started.md" },
     { "VapourSynth runtime" = "vapoursynth.md" },
   ] },
-  { "Project" = [
+  { "Reference" = [
+    { "Filter catalogue" = "filter-catalog.md" },
+    { "CLI reference" = "cli.md" },
+  ] },
+  { "Development" = [
     { "Architecture" = "architecture.md" },
-    { "Development" = "development.md" },
-    { "Roadmap" = "roadmap.md" },
+    { "Development guide" = "development.md" },
     { "Artifact lifecycle" = "artifacts.md" },
+    { "Roadmap" = "roadmap.md" },
   ] },
   { "GitHub" = "https://github.com/PlaneSight/vapoursynth-image-processing" },
 ]
@@ -34,7 +36,11 @@ features = [
   "content.action.view",
   "content.code.copy",
   "navigation.instant",
+  "navigation.instant.prefetch",
   "navigation.instant.progress",
+  "navigation.tabs",
+  "navigation.tabs.sticky",
+  "navigation.sections",
   "navigation.path",
   "navigation.top",
   "navigation.tracking",
